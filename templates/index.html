@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Analyzer Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #f8fafc; color: #334155; }
+        .navbar { background: #1e293b; padding: 1rem 0; }
+        
+        .main-card-wrapper {
+            width: 100%;
+            max-width: 900px; 
+            margin: 0 auto;
+        }
+        .card { border: none; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); background: white; }
+        
+        .btn-primary { background: #3b82f6; border: none; padding: 12px; border-radius: 12px; font-weight: 600; }
+        .btn-primary:hover { background: #2563eb; }
+        .form-control, .form-select { border-radius: 12px; padding: 12px; border: 1px solid #e2e8f0; }
+        .ai-output-box { padding: 30px; line-height: 1.8; font-size: 1.05rem; }
+        .ai-output-box h1, h2, h3 { color: #1e293b; border-bottom: 2px solid #e9ecef; padding-bottom: 5px; }
+        .ai-output-box strong { background-color: #fff3cd; padding: 2px 4px; border-radius: 4px; }
+        .history-card { transition: 0.3s; }
+
+        .card {
+    animation: fadeIn 0.8s ease-out;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.btn-primary:hover {
+    transform: scale(1.02);
+    transition: 0.3s;
+}
+
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark shadow-sm">
+    <div class="container-fluid px-4 d-flex justify-content-between">
+        <a class="navbar-brand fw-bold" href="/" style="font-size: 1.4rem;">🚀 AI Resume Analyzer</a>
+        <button class="btn btn-light rounded-pill px-4" type="button" data-bs-toggle="offcanvas" data-bs-target="#historyMenu">
+            <i class="bi bi-clock-history"></i> History
+        </button>
+    </div>
+</nav>
+
+<div class="container-fluid py-5 px-3">
+    <div class="main-card-wrapper">
+        <div class="card p-4 p-md-5 shadow-lg">
+            <h3 class="mb-4 text-center fw-bold">Analyze Your Career</h3>
+            {% if message %} <div class="alert alert-success py-2 text-center mb-4">{{ message }}</div> {% endif %}
+            
+            <form action="" method="POST" enctype="multipart/form-data" onsubmit="showLoading()">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Select Analysis Type</label>
+                    <select name="action_type" id="actionType" class="form-select" onchange="toggleJDBox()" required>
+                        <option value="analyze_mistakes">🔍 Mistakes & Improvements</option>
+                        <option value="ats_score">📈 Check ATS Score</option>
+                        <option value="jd_match">🎯 Job Description Match</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Upload Resume PDF</label>
+                    <input type="file" class="form-control" name="resume_file" accept=".pdf" required>
+                </div>
+                <div class="mb-4" id="jdBox" style="display: none;">
+                    <label class="form-label fw-semibold">Job Description</label>
+                    <textarea class="form-control" name="job_description" rows="4" placeholder="Paste JD here..."></textarea>
+                </div>
+                <button type="submit" id="submitBtn" class="btn btn-primary w-100">Analyze Now</button>
+            </form>
+        </div>
+
+        {% if ai_result %}
+        <div class="card mt-5 p-3 shadow-sm border-top border-primary border-4">
+            <div class="p-3"><h4 class="fw-bold"><i class="bi bi-stars text-primary"></i> Analysis Report</h4></div>
+            <textarea id="rawAiText" style="display:none;">{{ ai_result }}</textarea>
+            <div id="formattedAiResult" class="ai-output-box"></div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="offcanvas offcanvas-end" id="historyMenu" style="width: 350px;">
+    <div class="offcanvas-header bg-dark text-white">
+        <h5 class="offcanvas-title"><i class="bi bi-clock-history"></i> Recent Activity</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        {% for item in history %}
+        <div class="card mb-3 p-3 shadow-sm history-card border-start border-primary border-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <span class="badge bg-light text-primary">{{ item.action_type }}</span>
+                <div>
+                    <a href="{% url 'view_history_result' item.id %}" class="text-primary me-2"><i class="bi bi-eye"></i></a>
+                    <a href="{% url 'delete_history' item.id %}" class="text-danger"><i class="bi bi-trash"></i></a>
+                </div>
+            </div>
+            <p class="fw-bold mt-2 mb-1 text-truncate">{{ item.file_name }}</p>
+            <small class="text-muted">{{ item.created_at|date:"d M, Y" }}</small>
+        </div>
+        {% empty %}
+        <p class="text-center mt-5 text-muted">No history found!</p>
+        {% endfor %}
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const raw = document.getElementById("rawAiText");
+        if(raw) document.getElementById("formattedAiResult").innerHTML = marked.parse(raw.value);
+    });
+    function toggleJDBox() {
+        document.getElementById("jdBox").style.display = (document.getElementById("actionType").value === "jd_match") ? "block" : "none";
+    }
+    function showLoading() {
+        const btn = document.getElementById("submitBtn");
+        btn.disabled = true;
+        btn.innerHTML = 'Processing... <span class="spinner-border spinner-border-sm"></span>';
+    }
+</script>
+</body>
+</html>
