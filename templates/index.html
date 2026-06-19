@@ -31,14 +31,14 @@
         .progress-bar { font-size: 16px; font-weight: 600; line-height: 30px; }
         .badge-skill { font-size: 14px; font-weight: 500; padding: 8px 16px; border-radius: 50px; margin: 4px; display: inline-block; }
         
-        /* 1. TEXT OVERFLOW FIX */
+        /* TEXT OVERFLOW FIX */
         .card-body, .badge-skill, p, li, .suggestion-item {
             word-wrap: break-word;
             overflow-wrap: break-word;
             white-space: normal;
         }
 
-        /* 3. ATTRACTIVE RECOMMENDATIONS SECTION */
+        /* ATTRACTIVE RECOMMENDATIONS SECTION */
         .suggestion-item { 
             background: #ffffff; 
             border: 1px solid #e2e8f0;
@@ -144,8 +144,9 @@
                                     {{ ai_data.score }} / 100
                                 </div>
                             </div>
-                            <div class="badge bg-light text-dark border border-secondary-subtle px-3 py-2 fs-6">
-                                <i class="bi bi-robot text-primary"></i> Machine Readability: {{ ai_data.readability }}
+                            <!-- FIX: Removed badge class, added text-wrap to prevent overflow -->
+                            <div class="alert alert-light border border-secondary-subtle text-dark fs-6 text-start mx-auto mt-3" style="max-width: 800px; line-height: 1.6;">
+                                <i class="bi bi-robot text-primary me-2"></i><strong>Machine Readability:</strong> {{ ai_data.readability }}
                             </div>
                         </div>
 
@@ -161,7 +162,6 @@
                             <div class="col-md-6">
                                 <div class="p-4 rounded-4 h-100" style="background-color: #fef2f2; border: 1px solid #fecaca;">
                                     <h5 class="text-danger fw-bold"><i class="bi bi-x-circle-fill"></i> Missing Sections/Keywords</h5>
-                                    <!-- 2. MISSING SECTION RED BOXES REMOVED & CONVERTED TO CLEAN LIST -->
                                     <ul class="mt-3 mb-0 ps-3">
                                         {% for missing in ai_data.missing_sections %}
                                             <li class="mb-2 text-danger fw-medium">{{ missing }}</li>
@@ -213,7 +213,6 @@
                             <div class="col-md-6">
                                 <div class="p-4 rounded-4 h-100" style="background-color: #f8fafc; border: 1px solid #e2e8f0;">
                                     <h5 class="text-danger fw-bold mb-3"><i class="bi bi-exclamation-triangle"></i> Missing Skills</h5>
-                                    <!-- 2. MISSING SKILLS RED BOXES REMOVED & CONVERTED TO CLEAN LIST -->
                                     <ul class="mt-3 mb-0 ps-3">
                                         {% for skill in ai_data.missing_skills %}
                                             <li class="mb-2 text-danger fw-medium">{{ skill }}</li>
