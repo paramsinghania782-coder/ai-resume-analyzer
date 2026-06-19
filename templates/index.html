@@ -26,19 +26,16 @@
         .history-card { transition: 0.3s; border-radius: 12px; }
         .history-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
 
-        /* Dashboard Specific Styles */
         .progress { height: 30px; border-radius: 50px; background-color: #e2e8f0; }
         .progress-bar { font-size: 16px; font-weight: 600; line-height: 30px; }
         .badge-skill { font-size: 14px; font-weight: 500; padding: 8px 16px; border-radius: 50px; margin: 4px; display: inline-block; }
         
-        /* TEXT OVERFLOW FIX */
         .card-body, .badge-skill, p, li, .suggestion-item {
             word-wrap: break-word;
             overflow-wrap: break-word;
             white-space: normal;
         }
 
-        /* ATTRACTIVE RECOMMENDATIONS SECTION */
         .suggestion-item { 
             background: #ffffff; 
             border: 1px solid #e2e8f0;
@@ -90,7 +87,6 @@
 
 <div class="container-fluid py-5 px-3">
     <div class="main-card-wrapper">
-        <!-- Input Form Card -->
         <div class="card p-4 p-md-5 shadow-lg mb-5">
             <h3 class="mb-4 text-center fw-bold">Analyze Your Career</h3>
             {% if message %} <div class="alert alert-success py-2 text-center mb-4 fw-medium">{{ message }}</div> {% endif %}
@@ -117,7 +113,6 @@
             </form>
         </div>
 
-        <!-- AI OUTPUT DASHBOARD -->
         {% if ai_data %}
         <div class="card p-0 shadow-lg border-0 border-top border-primary border-5">
             <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
@@ -131,9 +126,6 @@
                 
                 {% else %}
 
-                    <!-- ============================================== -->
-                    <!-- DASHBOARD 1: ATS SCORE                         -->
-                    <!-- ============================================== -->
                     {% if action_type == 'ats_score' %}
                         <div class="text-center mb-5">
                             <h5 class="text-muted fw-bold mb-3">Overall ATS Score</h5>
@@ -144,7 +136,6 @@
                                     {{ ai_data.score }} / 100
                                 </div>
                             </div>
-                            <!-- FIX: Removed badge class, added text-wrap to prevent overflow -->
                             <div class="alert alert-light border border-secondary-subtle text-dark fs-6 text-start mx-auto mt-3" style="max-width: 800px; line-height: 1.6;">
                                 <i class="bi bi-robot text-primary me-2"></i><strong>Machine Readability:</strong> {{ ai_data.readability }}
                             </div>
@@ -180,9 +171,6 @@
                         {% endfor %}
 
 
-                    <!-- ============================================== -->
-                    <!-- DASHBOARD 2: JD MATCH                          -->
-                    <!-- ============================================== -->
                     {% elif action_type == 'jd_match' %}
                         <div class="text-center mb-5">
                             <h5 class="text-muted fw-bold mb-3">JD Match Percentage</h5>
@@ -225,9 +213,6 @@
                         </div>
 
 
-                    <!-- ============================================== -->
-                    <!-- DASHBOARD 3: ANALYZE MISTAKES                  -->
-                    <!-- ============================================== -->
                     {% elif action_type == 'analyze_mistakes' %}
                         <div class="alert bg-primary bg-opacity-10 border-primary border-opacity-25 p-4 rounded-4 mb-4">
                             <h5 class="fw-bold text-primary"><i class="bi bi-person-lines-fill"></i> Overall Impression</h5>
@@ -253,7 +238,7 @@
 
                     {% endif %}
                 
-                {% endif %} <!-- End of Error Check -->
+                {% endif %} 
 
             </div>
         </div>
@@ -261,7 +246,6 @@
     </div>
 </div>
 
-<!-- HISTORY SIDEBAR -->
 <div class="offcanvas offcanvas-end" id="historyMenu" style="width: 350px;">
     <div class="offcanvas-header bg-dark text-white">
         <h5 class="offcanvas-title"><i class="bi bi-clock-history"></i> Recent Activity</h5>
@@ -299,7 +283,6 @@
         document.getElementById("jdBox").style.display = (document.getElementById("actionType").value === "jd_match") ? "block" : "none";
     }
     
-    // Maintain state on reload if jd_match was selected
     window.onload = function() {
         toggleJDBox();
     };
