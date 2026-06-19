@@ -13,11 +13,9 @@ def extract_json_from_text(text):
     Ek helper function jo AI ke raw text me se sirf valid JSON nikalta hai.
     """
     text = text.strip()
-    # Find everything between the first { and the last }
     match = re.search(r'\{.*\}', text, re.DOTALL)
     if match:
         clean_json = match.group(0)
-        # Handle escape characters that might break JSON
         clean_json = clean_json.replace('\n', ' ').replace('\r', '')
         return clean_json
     return text
@@ -38,8 +36,6 @@ def home(request):
                 for page in pdf.pages:
                     extracted_text += page.extract_text() + "\n"
             
-            # Using JSON response format feature (if supported by the specific model version)
-            # or just strict prompting.
             model = genai.GenerativeModel('gemini-2.5-flash')
             
             prompt = ""
@@ -87,14 +83,11 @@ def home(request):
             response = model.generate_content(prompt)
             raw_ai_text = response.text
             
-            # Use the new cleaner function
             cleaned_json_string = extract_json_from_text(raw_ai_text)
 
             try:
-                # Try to parse the cleaned text
                 parsed_data = json.loads(cleaned_json_string)
             except json.JSONDecodeError as e:
-                # If it still fails, fallback gracefully
                 parsed_data = {
                     "error": "Failed to parse AI output. AI returned incorrectly formatted data.", 
                     "raw_text": raw_ai_text,
