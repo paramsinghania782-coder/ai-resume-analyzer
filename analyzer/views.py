@@ -4,8 +4,23 @@ import google.generativeai as genai
 from .models import ResumeHistory
 import os
 import json
+import re
 
 genai.configure(api_key=os.environ.get('GEMINI_API_KEY'))
+
+def extract_json_from_text(text):
+    """
+    Ek helper function jo AI ke raw text me se sirf valid JSON nikalta hai.
+    """
+    text = text.strip()
+    # Find everything between the first { and the last }
+    match = re.search(r'\{.*\}', text, re.DOTALL)
+    if match:
+        clean_json = match.group(0)
+        # Handle escape characters that might break JSON
+        clean_json = clean_json.replace('\n', ' ').replace('\r', '')
+        return clean_json
+    return text
 
 def home(request):
     recent_history = ResumeHistory.objects.all().order_by('-created_at')[:5]
@@ -23,61 +38,69 @@ def home(request):
                 for page in pdf.pages:
                     extracted_text += page.extract_text() + "\n"
             
+            # Using JSON response format feature (if supported by the specific model version)
+            # or just strict prompting.
             model = genai.GenerativeModel('gemini-2.5-flash')
             
-            # --- 1. Prompts for JSON Output ---
             prompt = ""
             if action_type == 'analyze_mistakes':
-                prompt = f"""Act as an expert Resume Reviewer. Review this resume and provide feedback strictly as a JSON object.
-                Required keys:
-                - "overall_impression": A string summarizing the resume.
-                - "key_mistakes": A list of strings detailing major mistakes.
-                - "improvements": A list of actionable suggestions.
-                Do not include markdown blocks like ```json.
+                prompt = f"""Act as an expert Resume Reviewer. Review this resume and provide feedback strictly as a valid, parsable JSON object.
+                CRITICAL: Return ONLY JSON. Do not return markdown, do not use 
+```json, do not add introductory text.
+                Ensure all string values are enclosed in double quotes. Avoid using unescaped double quotes inside the text.
+                Required JSON Structure:
+                {{
+                    "overall_impression": "A single string summarizing the resume.",
+                    "key_mistakes": ["mistake 1", "mistake 2"],
+                    "improvements": ["suggestion 1", "suggestion 2"]
+                }}
                 Resume text: {extracted_text}"""
             
             elif action_type == 'ats_score':
-                prompt = f"""Act as an ATS Expert. Calculate an estimated ATS score for this resume strictly as a JSON object.
-                Required keys:
-                - "score": Integer between 0 and 100.
-                - "readability": String describing machine readability status.
-                - "good_points": List of strings for what's good.
-                - "missing_sections": List of missing keywords/sections.
-                - "recommendations": List of 3 strict recommendations.
-                Do not include markdown blocks like ```json.
+                prompt = f"""Act as an ATS Expert. Calculate an estimated ATS score for this resume strictly as a valid JSON object.
+                CRITICAL: Return ONLY JSON. Do not return markdown, do not use 
+```json.
+                Required JSON Structure:
+                {{
+                    "score": integer between 0 and 100,
+                    "readability": "String describing machine readability status.",
+                    "good_points": ["point 1", "point 2"],
+                    "missing_sections": ["missing 1", "missing 2"],
+                    "recommendations": ["rec 1", "rec 2"]
+                }}
                 Resume text: {extracted_text}"""
             
             elif action_type == 'jd_match':
-                prompt = f"""Act as a Technical HR Recruiter. Compare this resume with the Job Description. Output strictly as a JSON object.
-                Required keys:
-                - "match_percentage": Integer between 0 and 100.
-                - "matched_skills": List of strings for matching skills.
-                - "missing_skills": List of strings for missing skills.
-                - "verdict": Final verdict string (e.g., 'Strong Fit', 'Not Fit').
-                Do not include markdown blocks like 
+                prompt = f"""Act as a Technical HR Recruiter. Compare this resume with the Job Description. Output strictly as a valid JSON object.
+                CRITICAL: Return ONLY JSON. Do not return markdown, do not use 
 ```json.
+                Required JSON Structure:
+                {{
+                    "match_percentage": integer between 0 and 100,
+                    "matched_skills": ["skill 1", "skill 2"],
+                    "missing_skills": ["skill 1", "skill 2"],
+                    "verdict": "Final verdict string (e.g., 'Strong Fit', 'Not Fit')"
+                }}
                 Job Description: {job_description}
                 Resume Text: {extracted_text}"""
 
-            # --- 2. Getting Response & Cleaning it ---
             response = model.generate_content(prompt)
-            raw_ai_text = response.text.strip()
+            raw_ai_text = response.text
             
-            # Cleaning markdown if AI adds it
-            if raw_ai_text.startswith("```json"):
-                raw_ai_text = raw_ai_text[7:]
-            if raw_ai_text.endswith("```"):
-                raw_ai_text = raw_ai_text[:-3]
-            raw_ai_text = raw_ai_text.strip()
+            # Use the new cleaner function
+            cleaned_json_string = extract_json_from_text(raw_ai_text)
 
-            # --- 3. Parsing JSON ---
             try:
-                parsed_data = json.loads(raw_ai_text)
-            except json.JSONDecodeError:
-                # Fallback if AI fails to give proper JSON
-                parsed_data = {"error": "Failed to parse AI output. Try again.", "raw_text": response.text}
+                # Try to parse the cleaned text
+                parsed_data = json.loads(cleaned_json_string)
+            except json.JSONDecodeError as e:
+                # If it still fails, fallback gracefully
+                parsed_data = {
+                    "error": "Failed to parse AI output. AI returned incorrectly formatted data.", 
+                    "raw_text": raw_ai_text,
+                    "parse_error": str(e)
+                }
 
-            # Save the JSON string in Database
             ResumeHistory.objects.create(
                 action_type=action_type,
                 file_name=file_name,
@@ -86,7 +109,6 @@ def home(request):
 
             recent_history = ResumeHistory.objects.all().order_by('-created_at')[:5]
             
-            # Passing parsed_data (dictionary) and action_type to template
             return render(request, 'index.html', {
                 'ai_data': parsed_data, 
                 'action_type': action_type,
@@ -107,11 +129,9 @@ def view_history_result(request, item_id):
     history_item = get_object_or_404(ResumeHistory, id=item_id)
     recent_history = ResumeHistory.objects.all().order_by('-created_at')[:5]
     
-    # Try to parse the saved string back into JSON dictionary
     try:
         parsed_data = json.loads(history_item.ai_result)
     except:
-        # For older records that were saved as plain text
         parsed_data = {"error": "Old text format", "raw_text": history_item.ai_result}
     
     return render(request, 'index.html', {
